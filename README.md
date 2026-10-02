@@ -8,12 +8,13 @@ CMPT 370 · University of Saskatchewan**
 **Group Name:**  "We'll Study It Later"     
 **Teaching Assistant:** Palash
 
-#	Name	Role	Email	NSID
-1	Patel Aarya	Team lead	pcq713@usask.ca	pcq713
-2	Patel Haryan	Member	bwr045@usask.ca	bwr045
-3	Patel Hetank	Member	fjw827@usask.ca	fjw827
-4	Sawant Mohit	Member	cwf024@usask.ca	cwf024
-5	Patel Priyesh	Member	orv018@usask.ca	orv018
+| # | Name | Role | Email | NSID |
+|---|---|---|---|---|
+| 1 | Patel Aarya | Team lead | pcq713@usask.ca | pcq713 |
+| 2 | Patel Haryan | Member | bwr045@usask.ca | bwr045 |
+| 3 | Patel Hetank | Member | fjw827@usask.ca | fjw827 |
+| 4 | Sawant Mohit | Member | cwf024@usask.ca | cwf024 |
+| 5 | Patel Priyesh | Member | orv018@usask.ca | orv018 |
 
 ## Section 2: Product Description
 
