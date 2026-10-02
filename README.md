@@ -1,4 +1,4 @@
-# Jugaad GPT
+# Counterpoint
 
 **Product Description  
 CMPT 370 · University of Saskatchewan**
@@ -8,39 +8,25 @@ CMPT 370 · University of Saskatchewan**
 **Group Name:**  "We'll Study It Later"     
 **Teaching Assistant:** Palash
 
-| # | Name | Email | NSID |
-|---|------|-------|------|
-| 1 | Patel Aarya | pcq713@usask.ca | pcq713 |
-| 2 | Patel Haryan | bwr045@usask.ca | bwr045 |
-| 3 | Patel Hetank | fjw827@usask.ca | fjw827 |
-| 4 | Sawant Mohit | cwf024@usask.ca | cwf024 |
-| 5 | Patel Priyesh | orv018@usask.ca | orv018 |
+#	Name	Role	Email	NSID
+1	Patel Aarya	Team lead	pcq713@usask.ca	pcq713
+2	Patel Haryan	Member	bwr045@usask.ca	bwr045
+3	Patel Hetank	Member	fjw827@usask.ca	fjw827
+4	Sawant Mohit	Member	cwf024@usask.ca	cwf024
+5	Patel Priyesh	Member	orv018@usask.ca	orv018
 
 ## Section 2: Product Description
 
-**Product Name:** Jugaad GPT
+**Product Name:** Counterpoint
 
-**Product Description:**
-A web application that answers questions about USask campus life housing, dining, clubs, recreation, health services, transit, and safety; using a knowledge base built from public university web pages.
+Product description: Counterpoint is a walk-up queue and visit record for the USask IT Support desk at Murray Library. Its essential features are kiosk check-in with a ticket number and estimated wait, a live staff queue for calling students to the desk's two stations, a lobby screen that shows ticket numbers instead of names, a TeamDynamix ticket draft built from each finished visit, staff presence (on desk, on break, at lunch), a coverage page for library staff, and weekly statistics on waits and busy hours.
 
-**Essential features:**
-- Plain language question entry
-- Retrieval over indexed page content
-- Answers generated only from the retrieved passages
-- A source link on every answer
-- An explicit refusal when no passage matches well enough
-- A maintainer view for adding and refreshing sources
+Need and value: Today students just form a line, with no record of who came first and no idea how long they'll wait. Assistants write tickets from memory long after the student has left, and desk coverage is tracked by posting in a Teams chat. TeamDynamix records tickets but not the line itself. Counterpoint records the line, cuts ticket-writing time, and gives the supervisor real wait and arrival data to staff the desk.
 
-**Need and Value:**
-Campus life information is spread across many separate USask pages and is difficult to locate, particularly for first year and international students. General AI assistants answer such questions confidently but have limited access of USask pages in front of them, so they can sometime give wrong information like deadlines, fees, and procedures. Jugaad GPT differs by answering only from real pages, showing the source so the student can verify it, and declining to answer rather than guessing a wrong answer about a deadline or a fee, which is worse than no answer, because students act on it.
+Stakeholders: students who walk up for help; IT Support student assistants; the IT Support desk supervisor; Murray Library evening and weekend staff, who need to know whether the desk is covered; and USask IT Support Services and the ICT manager, who care about service levels without using the system directly. Our stakeholders are USask IT Support Services and Jeenay, a USask Computer Science student who isn't in this course.
 
-***Stakeholders:***
-- **Students** are the primary users, especially those new to campus.
-- A **maintainer** organise the content and refreshes the sources.
-- **University units** whose information the product relays to the user (Student Central, Residence, the USSU, and Recreation Services) will not use the system themselves but have an interest in whether it represents their policies accurately.
-- The **course instructor and teaching assistant** will assess the product.
-- Our named **external stakeholder** is a USask student in the same degree who is not enrolled in this course.
+Technology requirements: for development, Python 3.11+ with FastAPI, SQLite through SQLAlchemy, WebSockets for live updates, plain HTML, CSS and JavaScript, pytest, and GitLab for the wiki, issue board, merge requests and CI. For the deployed product, one small web server on the university network running the FastAPI app with its database, opened in a browser on a check-in tablet, the desk computers and a lobby display. It needs no student accounts and no connection to TeamDynamix.
 
-**Technology Requirements:**
-- **Development:** Python 3.10+, Git on git.cs.usask.ca, pytest for testing, and requests with Beautiful Soup for collecting page content.
-- **Deployed product:** a retrieval index (BM25 initially, with sentence embeddings for semantic matching), an LLM API for answer generation, JSON storage for the page corpus, and a lightweight HTML/CSS/JavaScript front end.
+## Section 3: Use of AI
+
+We used Claude (Anthropic) to know which technologies are requried other than python, HTML and CSS.
