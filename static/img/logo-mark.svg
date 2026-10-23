@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64"><title>Counterpoint</title><g transform="translate(0 0) scale(1)">
+  <mask id="m-notch"><rect width="64" height="64" fill="#fff"/><circle cx="0" cy="32" r="7" fill="#000"/><circle cx="64" cy="32" r="7" fill="#000"/></mask>
+  <rect width="64" height="64" rx="14" fill="#1D6A4F" mask="url(#m-notch)"/>
+  <circle cx="16" cy="32" r="3.6" fill="#F4F7F5" opacity=".45"/>
+  <circle cx="27" cy="32" r="4.6" fill="#F4F7F5" opacity=".72"/>
+  <circle cx="39" cy="32" r="5.6" fill="#F4F7F5"/>
+  <rect x="47.5" y="18" width="5.5" height="28" rx="2.75" fill="#F4F7F5"/>
+</g></svg>
