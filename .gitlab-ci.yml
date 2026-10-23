@@ -1,5 +1,5 @@
 # Runs every feature's tests on every push | Built by Aarya Patel (team lead)
-# AI disclosure: first version generated with Claude (Anthropic); reviewed and edited by the team.
+# AI disclosure: with guidance of Claude (Anthropic).
 test:
   image: python:3.11-slim
   script:

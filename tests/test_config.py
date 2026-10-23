@@ -1,5 +1,5 @@
 # Shared settings tests | Built by Aarya Patel (team lead), owned by no feature
-# AI disclosure: first version generated with Claude (Anthropic); reviewed and edited by the team.
+# AI disclosure: with guidance of Claude (Anthropic).
 """The settings every feature reads. These need nothing else, so they run from the very first merge."""
 from app.core import config
 
