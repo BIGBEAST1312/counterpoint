@@ -1,0 +1,8 @@
+# Runs every feature's tests on every push | Built by Aarya Patel (team lead)
+# AI disclosure: first version generated with Claude (Anthropic); reviewed and edited by the team.
+test:
+  image: python:3.11-slim
+  script:
+    - pip install -r requirements.txt
+    # Exit code 5 means "no tests found yet" (the empty project structure): that counts as a pass.
+    - pytest -q || [ $? -eq 5 ]
