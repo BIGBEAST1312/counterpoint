@@ -1,8 +1,6 @@
 // Shared API client | Owner: Priyesh Patel, owned by no feature
 // AI disclosure: first version generated with Claude (Anthropic); reviewed and edited by the team.
-//
-// Every part talks to the backend through api(). It adds the sign-in token, turns error
-// responses into readable messages, and signs the user out if the server says the token expired.
+
 
 const TOKEN_KEY = "counterpoint.token";
 
