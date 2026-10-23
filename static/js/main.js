@@ -1,9 +1,6 @@
 // App shell: routing, sign-in gate, live updates | Owner: Priyesh Patel, owned by no feature
 // AI disclosure: first version generated with Claude (Anthropic); reviewed and edited by the team.
-//
-// Each feature exports init(), its refresh functions and the list of stories it has built.
-// This file decides which screen is visible and tells the right feature to refresh when the
-// server says something changed.
+
 
 import { api, connectLive } from "./api.js";
 import * as auth from "./auth.js";
