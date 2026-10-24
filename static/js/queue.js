@@ -1,6 +1,7 @@
 // Feature 1 (E1): kiosk check-in, wait estimate and leave the line | Owner: Mohit Sawant
 import { api } from "./api.js";
 import { $, esc, showErr } from "./ui.js";
+export const stories = ["US-01", "US-02", "US-03"];
 
 export function init(settings) {
   // US-01 and US-02: check in and see the place and wait
