@@ -131,4 +131,4 @@ Counterpoint never stores an NSID, student number or email for students: only a 
 
 ## AI use
 
-The first version of this code was generated with Claude (Anthropic) from our Deliverable 1 requirements. Each file says so at the top. Each owner must read, test and be able to explain their feature's code, and edit it as needed.
+The guidance with Claude (Anthropic) from our Deliverable 1 requirements. Each file says so at the top. Each owner must read, test and be able to explain their feature's code, and edit it as needed. AI gave us pseusdo code to help us make code on our own.
