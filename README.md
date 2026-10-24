@@ -42,11 +42,11 @@ counterpoint/
 │   ├── main.py               starts the app and plugs in each feature        · shared base (Mohit)
 │   ├── core/                 settings (Aarya) · clock (Haryan) · database, live updates (Mohit)
 │   ├── auth/                 staff sign-in and roles                          · shared base (Hetank)
-│   ├── queue/                Feature 1 · Walk-up queue                         · Mohit
-│   ├── tickets/              Feature 2 · Ticket drafts & shift handover        · Hetank
-│   ├── guides/               Feature 3 · Fix guides                            · Priyesh
-│   ├── report/               Feature 4 · Weekly report & trends                · Haryan
-│   └── coverage/             Feature 5 · Desk coverage                         · Aarya
+│   ├── queue/                Feature 1 -> Walk-up queue                         · Mohit
+│   ├── tickets/              Feature 2 -> Ticket drafts & shift handover        · Hetank
+│   ├── guides/               Feature 3 -> Fix guides                            · Priyesh
+│   ├── report/               Feature 4 -> Weekly report & trends                · Haryan
+│   └── coverage/             Feature 5 -> Desk coverage                         · Aarya
 ├── static/                   the web pages
 │   ├── index.html, css/, img/                                                  · shared base (Priyesh)
 │   └── js/                   api, auth, ui, main, settings (Priyesh) · dashboard (Haryan)
