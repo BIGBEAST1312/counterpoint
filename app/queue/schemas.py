@@ -1,7 +1,10 @@
-# Feature 1 (E1): request and reply shapes | Owner: Mohit Sawant
+# Feature 1 · Walk-up queue | Owner: Mohit Sawant
+# AI disclosure: first version generated with Claude (Anthropic); reviewed and edited by the owner.
+from datetime import datetime
+
 from pydantic import BaseModel, field_validator
 
-from app.core.config import PROBLEM_TYPES
+from app.core.config import COUNTERS, PROBLEM_TYPES
 
 from .logic import check_first_name
 
@@ -25,7 +28,7 @@ class CheckIn(BaseModel):
 
 class CheckInOut(BaseModel):
     ticket: str
-    place: int                      # 1 = next in line
+    place: int            # 1 = next to be called
     estimate_minutes: int | None
     message: str
 
@@ -33,3 +36,33 @@ class CheckInOut(BaseModel):
 class LeaveIn(BaseModel):
     ticket_no: int
     first_name: str
+
+
+class CallIn(BaseModel):
+    counter: str
+
+    @field_validator("counter")
+    @classmethod
+    def real_counter(cls, v: str) -> str:
+        if v not in COUNTERS:
+            raise ValueError(f"Unknown counter. The desk has {' and '.join(COUNTERS)}.")
+        return v
+
+
+class VisitOut(BaseModel):
+    """Staff view of a place in line (signed-in screens only)."""
+    id: int
+    ticket: str
+    first_name: str
+    problem_type: str
+    status: str
+    counter: str | None
+    arrived_at: datetime
+    called_at: datetime | None
+
+
+class LobbyCall(BaseModel):
+    """Public lobby screen: ticket and counter only, never a name or problem type (US-05)."""
+    ticket: str
+    counter: str | None
+    missed: bool
