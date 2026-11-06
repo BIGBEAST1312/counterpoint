@@ -31,6 +31,8 @@ class GuideIn(BaseModel):
             raise ValueError("Add at least one step.")
         if len(self.steps) > GUIDE_MAX_STEPS:
             raise ValueError(f"Guides can have {GUIDE_MAX_STEPS} steps at most. Split it into two guides.")
+        if any(len(s) > 500 for s in self.steps):
+            raise ValueError("Keep each step to 500 characters. Split a long step into two.")
         return self
 
 
@@ -43,4 +45,6 @@ class FlagIn(BaseModel):
         v = v.strip()
         if not v:
             raise ValueError("Say what's wrong so it can be fixed.")
-        return v[:300]
+        if len(v) > 300:
+            raise ValueError("Keep the reason to 300 characters.")
+        return v

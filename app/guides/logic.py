@@ -1,8 +1,9 @@
 # Feature 3 · Fix guides | Owner: Priyesh Patel
 # AI disclosure: Used AI for concept explanations, understanding syntax and debugging guidance.
 import re
+from datetime import datetime, timedelta
 
-from app.core.config import PROBLEM_TYPES
+from app.core.config import GUIDE_REVIEW_DAYS, PROBLEM_TYPES
 
 from .models import Guide
 
@@ -25,3 +26,7 @@ def search_score(guide: Guide, query: str) -> int:
     if not q <= (title | body | type_words):
         return 0
     return 10 * len(q & title) + len(q & body) + len(q & type_words)
+
+def needs_review(guide: Guide, now: datetime) -> bool:
+    """US-19: not reviewed in the last 90 days."""
+    return now - guide.reviewed_at > timedelta(days=GUIDE_REVIEW_DAYS)
