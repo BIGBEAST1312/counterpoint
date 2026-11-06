@@ -1,17 +1,19 @@
 # Feature 5 · Desk coverage | Owner: Aarya Patel
 # AI disclosure: with guidance of Claude (Anthropic).
-"""Rules for staff status and the coverage board. (The public coverage page and desk hours come in Product v2.)"""
+"""Rules for staff status, the coverage board, the public coverage page and desk hours."""
 import re
-from datetime import datetime
+from datetime import date, datetime, timedelta
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.auth.models import Staff
 from app.core import clock
+from app.core.config import DEFAULT_HOURS
 
 from . import notify
-from .models import AWAY, LABELS, OFF_SHIFT, ON_DESK, StaffStatus, StatusEvent, SupervisorNotification
+from .models import (AWAY, LABELS, OFF_SHIFT, ON_DESK, ClosedDay, DeskHours, StaffStatus, StatusEvent,
+                     SupervisorNotification)
 
 _HHMM = re.compile(r"^([01]?\d|2[0-3]):([0-5]\d)$")
 
@@ -103,3 +105,75 @@ def board(db: Session, now: datetime) -> dict:
         "alone": len(desk) == 1,
         "break_suggestion": suggestion,
     }
+
+
+# ---------- Desk hours (US-32) ----------
+
+def hours_for(db: Session, day: date) -> tuple[str | None, str | None, str | None]:
+    """(opens, closes, closed_reason) for one local date."""
+    closed = db.get(ClosedDay, day)
+    if closed:
+        return None, None, closed.reason or "Closed"
+    row = db.get(DeskHours, day.weekday())
+    opens, closes = (row.opens, row.closes) if row else DEFAULT_HOURS.get(day.weekday(), (None, None))
+    return opens, closes, None if opens else "Closed"
+
+
+def is_open(db: Session, now: datetime) -> bool:
+    opens, closes, _ = hours_for(db, clock.local_date(now))
+    if not opens:
+        return False
+    day = clock.local_date(now)
+    return clock.local_at(day, opens) <= now < clock.local_at(day, closes)
+
+
+def next_opening(db: Session, now: datetime) -> str | None:
+    """'today at 9:30 a.m.', 'tomorrow at 9:30 a.m.' or 'Monday at 10:00 a.m.'."""
+    today = clock.local_date(now)
+    for i in range(0, 15):
+        day = today + timedelta(days=i)
+        opens, _, _ = hours_for(db, day)
+        if opens and clock.local_at(day, opens) > now:
+            when = "today" if i == 0 else "tomorrow" if i == 1 else day.strftime("%A")
+            return f"{when} at {clock.fmt_time(clock.local_at(day, opens))}"
+    return None
+
+
+def week_hours(db: Session, now: datetime) -> list[dict]:
+    today = clock.local_date(now)
+    monday = clock.week_start(today)
+    out = []
+    for i in range(7):
+        day = monday + timedelta(days=i)
+        opens, closes, reason = hours_for(db, day)
+        out.append({"date": day, "weekday": day.strftime("%A"), "today": day == today,
+                    "opens": clock.fmt_time(clock.local_at(day, opens)) if opens else None,
+                    "closes": clock.fmt_time(clock.local_at(day, closes)) if opens else None,
+                    "closed": opens is None, "reason": reason})
+    return out
+
+
+# ---------- Public coverage page (US-30, US-31) ----------
+
+def coverage(db: Session, now: datetime) -> dict:
+    """What LibraryLara sees. Counts and times only: never a staff or student name."""
+    hours = week_hours(db, now)
+    if not is_open(db, now):
+        nxt = next_opening(db, now)
+        return {"state": "closed", "assistants_on": 0,
+                "message": "IT desk: closed." + (sentence(f" Opens {nxt}") if nxt else ""),
+                "back_at": None, "since": None, "week": hours}
+    today_start = clock.local_midnight_utc(clock.local_date(now))
+    count = sum(s.since >= today_start for s in on_desk(db))   # a check-out forgotten yesterday doesn't count
+    if count:
+        return {"state": "open", "assistants_on": count,
+                "message": f"IT desk: open, {count} assistant{'s' if count != 1 else ''} on.",
+                "back_at": None, "since": None, "week": hours}
+    left = db.scalar(select(StatusEvent.at).where(StatusEvent.from_status == ON_DESK, StatusEvent.at >= today_start)
+                     .order_by(StatusEvent.at.desc()).limit(1))
+    backs = [s.back_at for s in db.scalars(select(StaffStatus).where(StaffStatus.status.in_(AWAY))).all() if s.back_at and s.back_at >= today_start]
+    back = min(backs) if backs else None
+    msg = sentence("IT desk: unattended" + (f" since {clock.fmt_time(left)}" if left else ""))
+    return {"state": "unattended", "assistants_on": 0, "message": msg, "since": left,
+            "back_at": back, "back_message": sentence(f"Someone expected back at {clock.fmt_time(back)}") if back else None,
+            "week": hours}
