@@ -1,18 +1,19 @@
 # Feature 4 · Weekly report & trends | Owner: Haryan Patel
 # AI disclosure: first version generated with Claude (Anthropic); reviewed and edited by the owner.
 """The report reads past visits from the walk-up queue's table and never changes them.
-It uses no staff data and no desk hours.
-
-Product v1 (Deliverable 2): E7 · Weekly desk report (US-20 totals, US-21 heatmap, US-22 pick a week).
-E8 (US-23 compare, US-24 problem types, US-25 CSV) comes in Product v2."""
+It uses no staff data and no desk hours."""
+import csv
+import io
 from datetime import date, timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi.responses import Response
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.auth.deps import current_staff
 from app.core import clock
+from app.core.config import PROBLEM_TYPES
 from app.core.database import get_db
 from app.queue.models import CALLED, DONE, SERVING, WAITING, Visit
 
@@ -42,9 +43,27 @@ def _week(week: date | None) -> date:
 @router.get("/week")
 def weekly_report(week: date | None = Query(None, description="Any date in the week; defaults to this week"),
                   _=Depends(current_staff), db: Session = Depends(get_db)):
-    """US-20 totals and waits and US-21 heatmap for one week (US-22)."""
     monday = _week(week)
-    rows = _rows(db, monday)
+    rows, prev_rows = _rows(db, monday), _rows(db, monday - timedelta(days=7))
+    this, prev = calc.totals(rows), calc.totals(prev_rows)
     return {"week_start": monday, "week_end": monday + timedelta(days=6),
             "empty": not rows, "message": "No walk-ups recorded this week" if not rows else None,
-            "totals": calc.totals(rows), "heatmap": calc.heatmap(rows)}
+            "totals": this, "compare": calc.compare(this, prev, len(prev_rows)),
+            "heatmap": calc.heatmap(rows), "problem_types": calc.problem_types(rows, prev_rows, PROBLEM_TYPES)}
+
+
+@router.get("/week.csv")
+def weekly_csv(week: date | None = Query(None), _=Depends(current_staff), db: Session = Depends(get_db)):
+    """US-25: one row per visit. No first names and no ticket numbers, so no row can be traced to a student."""
+    monday = _week(week)
+    rows = sorted(_rows(db, monday), key=lambda r: r.arrived_at)
+    buf = io.StringIO()
+    w = csv.writer(buf)
+    w.writerow(["date", "arrival_time", "wait_minutes", "problem_type", "served"])
+    for r in rows:
+        t = r.local_arrival
+        w.writerow([t.date().isoformat(), t.strftime("%H:%M"),
+                    "" if r.wait_min is None else round(r.wait_min, 1),
+                    PROBLEM_TYPES.get(r.problem_type, r.problem_type), "yes" if r.served else "no"])
+    return Response(buf.getvalue(), media_type="text/csv",
+                    headers={"Content-Disposition": f'attachment; filename="counterpoint-week-{monday}.csv"'})

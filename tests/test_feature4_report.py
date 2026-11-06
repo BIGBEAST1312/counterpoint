@@ -1,7 +1,9 @@
 # Feature 4 · Weekly report & trends | Owner: Haryan Patel
 # AI disclosure: first version generated with Claude (Anthropic); reviewed and edited by the owner.
-"""One test per acceptance test in US-20 to US-22 (Product v1). US-23 to US-25 come in Product v2. Today is frozen at Tuesday 6 October 2026,
+"""One test per acceptance test in US-20 to US-25. Today is frozen at Tuesday 6 October 2026,
 so the week of 28 September is the last complete week."""
+import csv
+import io
 from datetime import date, datetime, timedelta, timezone
 
 import pytest
@@ -94,5 +96,67 @@ def test_us22_empty_week(client, chewy):
     assert r["empty"] and r["message"] == "No walk-ups recorded this week"
 
 
+# ---- US-23 Compare with the previous week ----
+
+def test_us23_change_and_direction(client, db, chewy):
+    week_of(db, start=(9, 21), served=95, never_served=5)    # 100 walk-ups
+    week_of(db, start=(9, 28), served=111, never_served=9)   # 120 walk-ups
+    c = client.get("/api/report/week", params={"week": "2026-09-28"}, headers=chewy).json()["compare"]
+    assert c["changes"]["walk_ups"] == {"diff": 20, "pct": 20, "verdict": None}
+    assert c["changes"]["walk_aways"]["verdict"] == "worse"
+
+
+def test_us23_lower_wait_is_better():
+    this, prev = {"median_wait": 8}, {"median_wait": 12}
+    assert calc.compare(this, prev, prev_walkups=50)["changes"]["median_wait"]["verdict"] == "better"
+
+
+def test_us23_no_previous_week(client, db, chewy):
+    week_of(db)
+    c = client.get("/api/report/week", params={"week": "2026-09-28"}, headers=chewy).json()["compare"]
+    assert c == {"available": False, "message": "No previous week to compare"}
+
+
+# ---- US-24 What people come in for ----
+
+def test_us24_breakdown_biggest_change_and_adds_up(client, db, chewy):
+    week_of(db, start=(9, 21), served=10, never_served=0, ptype="wifi")
+    week_of(db, start=(9, 21), served=20, never_served=0, ptype="mfa")
+    week_of(db, start=(9, 28), served=25, never_served=0, ptype="wifi")
+    week_of(db, start=(9, 28), served=30, never_served=0, ptype="mfa")
+    r = client.get("/api/report/week", params={"week": "2026-09-28"}, headers=chewy).json()
+    p = r["problem_types"]
+    assert [i["label"] for i in p["items"]] == ["MFA & sign-in", "Wi-Fi (eduroam)"]
+    assert p["biggest_increase"] == "wifi"
+    assert sum(i["count"] for i in p["items"]) == r["totals"]["walk_ups"]
+
+
+# ---- US-25 Download the week as CSV ----
+
+def test_us25_download_no_names_matches_report(client, db, chewy):
+    week_of(db)
+    r = client.get("/api/report/week.csv", params={"week": "2026-09-28"}, headers=chewy)
+    rows = list(csv.reader(io.StringIO(r.text)))
+    assert rows[0] == ["date", "arrival_time", "wait_minutes", "problem_type", "served"]
+    assert len(rows) - 1 == 120
+    assert "Student" not in r.text and "#" not in r.text
+    assert "attachment" in r.headers["content-disposition"]
+
+
 def test_report_needs_sign_in(client):
     assert client.get("/api/report/week").status_code == 401
+
+
+# ---- Defects found while testing Product v2 (regression tests) ----
+
+def test_us21_early_and_late_visits_stay_on_the_grid(client, db, chewy):
+    """D-R1: US-32 lets seniors change desk hours, but the heatmap only had 9 a.m.-9 p.m. columns,
+    so visits before 9 or after 9 p.m. vanished and the grid no longer added up to the walk-ups."""
+    visit(db, (9, 29), 8, 30)
+    visit(db, (9, 29), 21, 15)
+    visit(db, (9, 30), 13)
+    db.commit()
+    rep = client.get("/api/report/week", params={"week": "2026-09-28"}, headers=chewy).json()
+    h = rep["heatmap"]
+    assert sum(sum(r["counts"]) for r in h["rows"]) == rep["totals"]["walk_ups"] == 3
+    assert h["hours"][0] == 8 and h["hours"][-1] == 21
