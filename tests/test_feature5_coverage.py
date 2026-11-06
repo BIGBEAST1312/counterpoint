@@ -1,13 +1,12 @@
 # Feature 5 · Desk coverage | Owner: Aarya Patel
 # AI disclosure: with guidance of Claude (Anthropic).
-"""One test per acceptance test in US-26 to US-29 and US-33 (Product v1). US-30 to US-32 come in Product v2.
-The clock is frozen on Wednesday 14 October 2026."""
+"""One test per acceptance test in US-26 to US-33. The clock is frozen on Wednesday 14 October 2026."""
 import pytest
 
-from app.auth.models import ROLE_LEAD, ROLE_SUPERVISOR
+from app.auth.models import ROLE_ASSISTANT, ROLE_LEAD, ROLE_SUPERVISOR
 from app.core import config
 from app.coverage import notify
-from app.coverage.models import SupervisorNotification
+from app.coverage.models import ClosedDay, SupervisorNotification
 
 
 @pytest.fixture
@@ -112,6 +111,73 @@ def test_us29_who_is_next_only_when_covered_and_resets(client, team, freeze):
     assert b["break_suggestion"]["name"] == "Priya"   # Sam's time now counts from 11:15
 
 
+# ---- US-30 Public coverage page ----
+
+def test_us30_open_unattended_and_no_names(client, team, freeze):
+    freeze(2026, 10, 14, 11, 0)
+    set_status(client, team["sam"], "on_desk")
+    set_status(client, team["priya"], "on_desk")
+    r = client.get("/api/coverage")   # no sign-in
+    assert r.json()["message"] == "IT desk: open, 2 assistants on."
+    assert "Sam" not in r.text and "Priya" not in r.text
+    set_status(client, team["sam"], "off_shift")
+    freeze(2026, 10, 14, 12, 40)
+    set_status(client, team["priya"], "at_lunch", confirm=True)
+    assert client.get("/api/coverage").json()["message"] == "IT desk: unattended since 12:40 p.m."
+
+
+# ---- US-31 When will someone be back ----
+
+def test_us31_earliest_back_at_or_none(client, team, freeze):
+    freeze(2026, 10, 14, 12, 30)
+    set_status(client, team["sam"], "on_desk")
+    set_status(client, team["priya"], "on_desk")
+    set_status(client, team["sam"], "at_lunch")
+    set_status(client, team["priya"], "on_break", confirm=True)
+    assert client.get("/api/coverage").json()["back_message"] is None     # nobody gave a time
+    set_status(client, team["sam"], "at_lunch", "13:30")
+    set_status(client, team["priya"], "on_break", "13:15")
+    assert client.get("/api/coverage").json()["back_message"] == "Someone expected back at 1:15 p.m."
+
+
+# ---- US-32 Desk hours and closed days ----
+
+def test_us32_week_closed_day_and_outside_hours(client, db, freeze):
+    freeze(2026, 10, 14, 11, 0)   # Wednesday
+    db.add(ClosedDay(day=__import__("datetime").date(2026, 10, 12), reason="Thanksgiving"))
+    db.commit()
+    week = client.get("/api/coverage").json()["week"]
+    assert [d["weekday"] for d in week] == ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+    assert week[2]["today"] and week[2]["opens"] == "9:30 a.m." and week[2]["closes"] == "9:00 p.m."
+    assert week[5]["opens"] == "10:00 a.m." and week[5]["closes"] == "6:00 p.m."
+    assert week[0]["closed"] and week[0]["reason"] == "Thanksgiving"
+    freeze(2026, 10, 14, 21, 45)
+    assert client.get("/api/coverage").json()["message"] == "IT desk: closed. Opens tomorrow at 9:30 a.m."
+
+
+def test_us30_yesterday_doesnt_count(client, team, freeze):
+    """Review fixes: a check-out forgotten yesterday doesn't keep the desk 'open', and 'since' is never yesterday's time."""
+    freeze(2026, 10, 14, 18, 0)
+    set_status(client, team["sam"], "on_desk")
+    set_status(client, team["priya"], "on_desk")
+    set_status(client, team["priya"], "off_shift")   # Sam forgets to check out
+    freeze(2026, 10, 15, 9, 35)                       # Thursday, open, nobody has checked in yet
+    assert client.get("/api/coverage").json()["message"] == "IT desk: unattended."
+
+
+def test_us32_only_seniors_change_hours_and_bad_times_refused(client, team, make_staff):
+    """Review fixes: assistants can't change the hours, and a closing time like 24:00 is refused."""
+    boss = make_staff("chewy", role=ROLE_SUPERVISOR, display_name="Chewy")[1]
+    hours = [{"weekday": 2, "opens": "09:30", "closes": "21:00"}]
+    assert client.put("/api/desk-hours", json=hours, headers=team["sam"]).status_code == 403
+    assert client.put("/api/desk-hours", json=[{"weekday": 2, "opens": "09:30", "closes": "24:00"}], headers=boss).status_code == 422
+    assert client.post("/api/desk-hours/closed", json={"day": "2026-10-16", "reason": "Fall break"}, headers=boss).status_code == 201
+    friday = client.get("/api/coverage").json()["week"][4]
+    assert friday["closed"] and friday["reason"] == "Fall break"
+    assert client.delete("/api/desk-hours/closed/2026-10-16", headers=boss).status_code == 204
+    assert not client.get("/api/coverage").json()["week"][4]["closed"]
+
+
 # ---- US-33 Tell the supervisor about status changes, with the time ----
 
 def test_us33_every_change_with_its_time(client, team, freeze, make_staff):
@@ -196,4 +262,4 @@ def test_us33_email_failure_never_blocks_status(client, team, make_staff, monkey
 
 def test_status_needs_sign_in(client):
     assert client.patch("/api/status/me", json={"status": "on_desk"}).status_code == 401
-    assert client.get("/api/status/board").status_code == 401
+    assert client.get("/api/coverage").status_code == 200

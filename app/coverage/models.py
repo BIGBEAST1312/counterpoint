@@ -1,8 +1,8 @@
 # Feature 5 · Desk coverage | Owner: Aarya Patel
 # AI disclosure: with guidance of Claude (Anthropic).
-from datetime import datetime
+from datetime import date, datetime
 
-from sqlalchemy import ForeignKey, String
+from sqlalchemy import Date, ForeignKey, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.auth.models import Staff
@@ -54,3 +54,66 @@ class SupervisorNotification(Base):
     at: Mapped[datetime] = mapped_column(UTCDateTime, index=True)
     read_at: Mapped[datetime | None] = mapped_column(UTCDateTime, default=None)
     emailed: Mapped[bool] = mapped_column(default=False)
+
+
+class DeskHours(Base):
+    """US-32: opening hours for each weekday (0 = Monday). opens = None means closed all day."""
+
+    __tablename__ = "desk_hours"
+
+    weekday: Mapped[int] = mapped_column(primary_key=True)
+    opens: Mapped[str | None] = mapped_column(String(5), default=None)   # "09:30"
+    closes: Mapped[str | None] = mapped_column(String(5), default=None)  # "21:00"
+
+
+class ClosedDay(Base):
+    """US-32 test 2: a day the desk is closed, e.g. a university holiday."""
+
+    __tablename__ = "closed_day"
+
+    day: Mapped[date] = mapped_column(Date, primary_key=True)
+    reason: Mapped[str] = mapped_column(String(80), default="")
+
+
+# ---------- E11 · Time away from the desk (Deliverable 3) ----------
+
+SICK, EMERGENCY = "sick", "emergency"
+ABSENCE_KINDS = {SICK: "Sick", EMERGENCY: "Emergency"}
+PENDING, APPROVED, DECLINED, CANCELLED = "pending", "approved", "declined", "cancelled"
+
+
+class AbsenceReport(Base):
+    """US-34: 'I can't make my shift', sent the moment it happens. No medical details are asked for."""
+
+    __tablename__ = "absence_report"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    staff_id: Mapped[int] = mapped_column(ForeignKey("staff.id"), index=True)
+    kind: Mapped[str] = mapped_column(String(10))                 # sick or emergency (supervisor and leads only)
+    shift_start: Mapped[datetime] = mapped_column(UTCDateTime, index=True)
+    shift_end: Mapped[datetime] = mapped_column(UTCDateTime)
+    note: Mapped[str] = mapped_column(String(200), default="")    # optional; supervisor and leads only
+    reported_at: Mapped[datetime] = mapped_column(UTCDateTime)
+    late: Mapped[bool] = mapped_column(default=False)             # reported after the shift started
+
+    staff: Mapped[Staff] = relationship()
+
+
+class TimeOffRequest(Base):
+    """US-35, US-36: days off asked for ahead of time, decided by the supervisor or a shift lead."""
+
+    __tablename__ = "time_off_request"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    staff_id: Mapped[int] = mapped_column(ForeignKey("staff.id"), index=True)
+    start_day: Mapped[date] = mapped_column(Date, index=True)
+    end_day: Mapped[date] = mapped_column(Date)
+    reason: Mapped[str] = mapped_column(String(120))
+    status: Mapped[str] = mapped_column(String(10), default=PENDING)
+    requested_at: Mapped[datetime] = mapped_column(UTCDateTime)
+    decided_by_id: Mapped[int | None] = mapped_column(ForeignKey("staff.id"), default=None)
+    decided_at: Mapped[datetime | None] = mapped_column(UTCDateTime, default=None)
+    decision_reason: Mapped[str] = mapped_column(String(200), default="")
+
+    staff: Mapped[Staff] = relationship(foreign_keys=[staff_id])
+    decided_by: Mapped[Staff | None] = relationship(foreign_keys=[decided_by_id])
