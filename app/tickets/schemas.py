@@ -4,7 +4,7 @@ from pydantic import BaseModel, Field, field_validator
 
 from app.core.config import PROBLEM_TYPES
 
-from .models import OUTCOMES
+from .models import CATEGORIES, OUTCOMES
 
 
 class DraftIn(BaseModel):
@@ -51,4 +51,39 @@ class TdxIn(BaseModel):
         v = v.strip()
         if not v.isdigit():
             raise ValueError("TeamDynamix numbers are digits only.")
+        return v
+
+
+class FollowUpIn(BaseModel):
+    note: str = Field(max_length=500)
+
+    @field_validator("note")
+    @classmethod
+    def has_note(cls, v):
+        v = v.strip()
+        if not v:
+            raise ValueError("Add a short note saying what you did.")
+        return v
+
+
+class NoteIn(BaseModel):
+    text: str = ""
+    category: str = "FYI"
+    urgent: bool = False
+
+    @field_validator("text")
+    @classmethod
+    def length(cls, v):
+        v = v.strip()
+        if not v:
+            raise ValueError("Write something in the note.")
+        if len(v) > 500:
+            raise ValueError("Notes can be 500 characters at most.")
+        return v
+
+    @field_validator("category")
+    @classmethod
+    def known_category(cls, v):
+        if v not in CATEGORIES:
+            raise ValueError("Category must be Follow-up, Equipment or FYI.")
         return v
